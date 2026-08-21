@@ -3104,7 +3104,69 @@ function AdminSettings() {
           </span>
         )}
       </div>
+
+      <AdminChangePasswordSection />
     </div>
+  )
+}
+
+function AdminChangePasswordSection() {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setError(null)
+    setSuccess(false)
+    if (newPassword !== confirmPassword) { setError('New passwords do not match'); return }
+    if (newPassword.length < 8) { setError('New password must be at least 8 characters'); return }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Failed to change password'); return }
+      setSuccess(true)
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
+      setTimeout(() => setSuccess(false), 3000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">Change Password</CardTitle></CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-3 max-w-md">
+          <div>
+            <Label className="text-xs">Current Password</Label>
+            <Input id="admin-current-pw" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required placeholder="••••••••" />
+          </div>
+          <div>
+            <Label className="text-xs">New Password</Label>
+            <Input id="admin-new-pw" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} placeholder="Min 8 characters" />
+          </div>
+          <div>
+            <Label className="text-xs">Confirm New Password</Label>
+            <Input id="admin-confirm-pw" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} placeholder="Re-enter new password" />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          {success && <p className="text-sm text-green-600 flex items-center gap-1"><CheckCircle2 className="size-4" /> Password changed successfully!</p>}
+          <Button type="submit" disabled={saving} className="gradient-brand text-brand-foreground">
+            {saving && <Loader2 className="size-4 mr-2 animate-spin" />}
+            Change Password
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   )
 }
 
