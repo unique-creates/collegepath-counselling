@@ -137,11 +137,6 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login', redirectT
                   Sign In
                 </Button>
               </form>
-              <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">Demo accounts:</p>
-                <p>Admin: admin@collegepath.in / admin@123</p>
-                <p>Student: student@collegepath.in / student@123</p>
-              </div>
             </TabsContent>
 
             <TabsContent value="register" className="space-y-4 pt-4">
