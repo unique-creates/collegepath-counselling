@@ -5,8 +5,6 @@ import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { handleApiError, ok, err } from '@/lib/api'
 import { z } from 'zod'
 
-export const dynamic = 'force-dynamic'
-
 const schema = z.object({ email: z.string().email() })
 
 export async function POST(req: NextRequest) {
@@ -20,21 +18,30 @@ export async function POST(req: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { email: parsed.email.toLowerCase() },
-      select: { id: true, status: true },
+      select: { id: true, status: true, name: true, email: true },
     })
-    if (!user) return ok({ ok: true }) // don't leak existence
-    if (user.status !== 'ACTIVE') return ok({ ok: true })
+    if (!user) return ok({ ok: true, message: 'If your email is registered, a reset link has been generated.' })
+    if (user.status !== 'ACTIVE') return ok({ ok: true, message: 'If your email is registered, a reset link has been generated.' })
 
+    const token = generateToken(48)
     const expires = new Date(Date.now() + 1000 * 60 * 30) // 30 min
     await db.passwordReset.create({
       data: {
         userId: user.id,
-        token: generateToken(48),
+        token,
         expiresAt: expires,
       },
     })
-    // Email integration: in production, send via SMTP.
-    return ok({ ok: true })
+
+    // In production with email service configured, send email here.
+    // For now, return the reset link so the user can use it.
+    const resetLink = `/#/reset-password?token=${token}`
+
+    return ok({
+      ok: true,
+      resetLink,
+      message: 'A password reset link has been generated. Use it to reset your password.',
+    })
   } catch (e) {
     return handleApiError(e)
   }

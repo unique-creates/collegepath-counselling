@@ -18,18 +18,20 @@ type Props = {
 }
 
 export function AuthDialog({ open, onOpenChange, defaultTab = 'login', redirectTo }: Props) {
-  const [tab, setTab] = useState<'login' | 'register'>(defaultTab)
+  const [tab, setTab] = useState<'login' | 'register' | 'forgot'>(defaultTab as any)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [resetLink, setResetLink] = useState<string | null>(null)
   const { login } = useSession()
   const { navigate } = useHashRouter()
 
   useEffect(() => {
     if (open) {
-      setTab(defaultTab)
+      setTab(defaultTab as any)
       setError(null)
       setSuccess(false)
+      setResetLink(null)
     }
   }, [open, defaultTab])
 
@@ -110,10 +112,23 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login', redirectT
           </div>
         ) : (
           <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setError(null) }}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Sign In</TabsTrigger>
-              <TabsTrigger value="register">Sign Up</TabsTrigger>
-            </TabsList>
+            {tab !== 'forgot' ? (
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login" onClick={() => { setTab('login'); setError(null) }}>Sign In</TabsTrigger>
+                <TabsTrigger value="register" onClick={() => { setTab('register'); setError(null) }}>Sign Up</TabsTrigger>
+              </TabsList>
+            ) : (
+              <div className="flex items-center justify-between pb-2">
+                <h3 className="text-sm font-semibold">Reset Password</h3>
+                <button
+                  type="button"
+                  onClick={() => { setTab('login'); setError(null); setResetLink(null) }}
+                  className="text-xs text-primary hover:underline"
+                >
+                  ← Back to Login
+                </button>
+              </div>
+            )}
 
             <TabsContent value="login" className="space-y-4 pt-4">
               <form onSubmit={handleLogin} className="space-y-4">
@@ -132,10 +147,19 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login', redirectT
                   </div>
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                <Button type="submit" disabled={loading} className="w-full gradient-brand text-brand-foreground">
-                  {loading && <Loader2 className="size-4 mr-2 animate-spin" />}
-                  Sign In
-                </Button>
+                <div className="flex items-center justify-between">
+                  <Button type="submit" disabled={loading} className="gradient-brand text-brand-foreground">
+                    {loading && <Loader2 className="size-4 mr-2 animate-spin" />}
+                    Sign In
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => { setTab('forgot'); setError(null) }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
               </form>
             </TabsContent>
 
@@ -176,6 +200,75 @@ export function AuthDialog({ open, onOpenChange, defaultTab = 'login', redirectT
                 </Button>
               </form>
             </TabsContent>
+
+            {tab === 'forgot' && (
+              <div className="space-y-4 pt-4">
+                {resetLink ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-col items-center gap-3 py-4 text-center">
+                      <Mail className="size-12 text-primary" />
+                      <p className="font-medium text-sm">Reset link generated!</p>
+                      <p className="text-xs text-muted-foreground">
+                        Click the link below to reset your password. The link expires in 30 minutes.
+                      </p>
+                    </div>
+                    <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onOpenChange(false)
+                          navigate(resetLink.replace('#', ''))
+                        }}
+                        className="text-sm text-primary font-medium hover:underline"
+                      >
+                        Reset My Password →
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault()
+                    setError(null)
+                    setLoading(true)
+                    const formData = new FormData(e.currentTarget)
+                    const email = String(formData.get('email') || '')
+                    try {
+                      const res = await fetch('/api/auth/forgot-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email }),
+                      })
+                      const data = await res.json()
+                      if (data.resetLink) {
+                        setResetLink(data.resetLink)
+                      } else {
+                        setError('Could not generate reset link. Please try again.')
+                      }
+                    } catch {
+                      setError('Something went wrong. Please try again.')
+                    } finally {
+                      setLoading(false)
+                    }
+                  }} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="forgot-email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                        <Input id="forgot-email" name="email" type="email" placeholder="you@example.com" className="pl-9" required />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Enter your registered email and we'll generate a password reset link for you.
+                    </p>
+                    {error && <p className="text-sm text-destructive">{error}</p>}
+                    <Button type="submit" disabled={loading} className="w-full gradient-brand text-brand-foreground">
+                      {loading && <Loader2 className="size-4 mr-2 animate-spin" />}
+                      Send Reset Link
+                    </Button>
+                  </form>
+                )}
+              </div>
+            )}
           </Tabs>
         )}
       </DialogContent>

@@ -26,6 +26,7 @@ import { ContactPage } from '@/components/site/ContactPage'
 import { FAQPage } from '@/components/site/FAQPage'
 import { PrivacyPage, TermsPage, RefundPage, DisclaimerPage } from '@/components/site/LegalPages'
 import { NotFoundPage } from '@/components/site/NotFoundPage'
+import { ResetPasswordPage } from '@/components/site/ResetPasswordPage'
 import { StudentDashboard } from '@/components/student/StudentDashboard'
 import { AdminDashboard } from '@/components/admin/AdminDashboard'
 
@@ -73,6 +74,9 @@ function Router() {
 
   // Admin
   if (first === 'admin') return <AdminDashboard />
+
+  // Reset password page
+  if (first === 'reset-password') return <ResetPasswordPage />
 
   // Login / register aliases - render home; the global AuthDialog will open via LoginRedirect
   if (first === 'login') return <LoginRedirect tab="login" />
